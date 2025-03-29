@@ -1,0 +1,28 @@
+# Web Framework
+flask
+Werkzeug
+
+# Data Processing
+pandas
+numpy
+scikit-learn
+joblib
+
+# Visualization
+matplotlib
+seaborn
+
+# Machine Learning
+xgboost
+imbalanced-learn
+statsmodels
+
+# API Client for LLM
+requests
+
+# Time Series (Optional)
+prophet
+
+# Excel Support
+openpyxl
+xlrd

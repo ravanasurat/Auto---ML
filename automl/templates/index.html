@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Assistant - AutoML with LLM Description</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        .header {
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .section-title {
+            border-bottom: 2px solid #4b6cb7;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            color: #182848;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        .step-number {
+            background-color: #4b6cb7;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #4b6cb7;
+        }
+        .preview-table {
+            font-size: 0.9rem;
+        }
+        .preview-table th {
+            background-color: #f8f9fa;
+        }
+        .result-card {
+            margin-bottom: 2rem;
+        }
+        .model-card {
+            border-left: 4px solid #4b6cb7;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4b6cb7;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .loading-spinner {
+            width: 3rem;
+            height: 3rem;
+        }
+        .feature-importance-bar {
+            background-color: #e9ecef;
+            border-radius: 4px;
+            height: 20px;
+            margin-bottom: 5px;
+            position: relative;
+        }
+        .feature-importance-fill {
+            background-color: #4b6cb7;
+            border-radius: 4px;
+            height: 100%;
+        }
+        .feature-importance-text {
+            position: absolute;
+            left: 10px;
+            top: 0;
+            color: white;
+            line-height: 20px;
+            font-size: 0.8rem;
+        }
+        .tab-content {
+            padding: 1.5rem;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 0.25rem 0.25rem;
+        }
+        #errorAlert {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="display-4"><i class="bi bi-robot"></i> ML Assistant</h1>
+            <p class="lead">A smart tool that uses LLM to understand your data and AutoML to build the best models</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="alert alert-danger" id="errorAlert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> <span id="errorMessage"></span>
+        </div>
+
+        <!-- Steps Navigation -->
+        <ul class="nav nav-pills nav-fill mb-4" id="stepsNav">
+            <li class="nav-item">
+                <a class="nav-link active" id="step1-tab" data-bs-toggle="pill" href="#step1">
+                    <span class="step-number">1</span> Upload Dataset
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" id="step2-tab" data-bs-toggle="pill" href="#step2">
+                    <span class="step-number">2</span> Configure Task
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" id="step3-tab" data-bs-toggle="pill" href="#step3">
+                    <span class="step-number">3</span> Train Models
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" id="step4-tab" data-bs-toggle="pill" href="#step4">
+                    <span class="step-number">4</span> Test & Download
+                </a>
+            </li>
+        </ul>
+
+        <!-- Steps Content -->
+        <div class="tab-content" id="stepsContent">
+            <!-- Step 1: Upload Dataset -->
+            <div class="tab-pane fade show active" id="step1">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="section-title">Upload Your Dataset</h3>
+                        <p>Upload your CSV or Excel file to get started. We'll analyze it and help you build the best machine learning model.</p>
+                        
+                        <div class="upload-area" id="uploadArea">
+                            <i class="bi bi-cloud-arrow-up display-4 text-muted"></i>
+                            <h4 class="mt-3">Drag and drop your file here</h4>
+                            <p class="text-muted">or</p>
+                            <input type="file" id="fileInput" class="d-none" accept=".csv,.xls,.xlsx">
+                            <button class="btn btn-primary" id="browseButton">Browse Files</button>
+                            <p class="mt-2 text-muted small">Supported formats: CSV, Excel (.xls, .xlsx)</p>
+                        </div>
+                        
+                        <div id="uploadProgress" class="progress mt-3" style="display: none;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4" id="dataPreviewCard" style="display: none;">
+                    <div class="card-body">
+                        <h4>Data Preview</h4>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered preview-table" id="previewTable">
+                                <thead>
+                                    <tr id="previewTableHeader"></tr>
+                                </thead>
+                                <tbody id="previewTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end">
+                            <p class="text-muted"><span id="rowCount">0</span> rows × <span id="colCount">0</span> columns</p>
+                            <button class="btn btn-primary" id="continueToStep2Button">Continue <i class="bi bi-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Configure Task -->
+            <div class="tab-pane fade" id="step2">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="section-title">Configure Your Task</h3>
+                        <p>Tell us about your data and what you want to do with it.</p>
+                        
+                        <form id="taskConfigForm">
+                            <div class="mb-3">
+                                <label for="datasetDescription" class="form-label">Dataset Description (Optional)</label>
+                                <textarea class="form-control" id="datasetDescription" rows="3" placeholder="Describe your dataset and what the columns represent..."></textarea>
+                                <div class="form-text">Providing a description helps the AI understand your data better.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Task Type</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="taskType" id="taskClassification" value="classification" checked>
+                                    <label class="form-check-label" for="taskClassification">
+                                        <i class="bi bi-tag"></i> Classification - Predict categories
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="taskType" id="taskRegression" value="regression">
+                                    <label class="form-check-label" for="taskRegression">
+                                        <i class="bi bi-graph-up"></i> Regression - Predict numerical values
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="taskType" id="taskClustering" value="clustering">
+                                    <label class="form-check-label" for="taskClustering">
+                                        <i class="bi bi-diagram-3"></i> Clustering - Group similar data
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3" id="labeledDataSection">
+                                <label class="form-label">Is your data labeled?</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="isLabeled" id="dataLabeled" value="true" checked>
+                                    <label class="form-check-label" for="dataLabeled">
+                                        Yes, my data has labels
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="isLabeled" id="dataUnlabeled" value="false">
+                                    <label class="form-check-label" for="dataUnlabeled">
+                                        No, my data is unlabeled
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3" id="targetColumnSection">
+                                <label for="targetColumn" class="form-label">Target Column</label>
+                                <select class="form-select" id="targetColumn">
+                                    <option value="">Select target column...</option>
+                                </select>
+                                <div class="form-text">This is the column that contains the values you want to predict.</div>
+                            </div>
+                            
+                            <div class="text-end mt-4">
+                                <button type="button" class="btn btn-outline-secondary me-2" id="backToStep1Button">
+                                    <i class="bi bi-arrow-left"></i> Back
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="analyzeDataButton">
+                                    Analyze Data <i class="bi bi-lightning"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="loading" id="analysisLoading">
+                    <div class="spinner-border loading-spinner text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="mt-3">Analyzing your dataset...</h5>
+                    <p class="text-muted">This may take a minute as our AI learns about your data.</p>
+                </div>
+                
+                <div class="card mt-4" id="analysisResultCard" style="display: none;">
+                    <div class="card-body">
+                        <h4><i class="bi bi-lightbulb"></i> Dataset Analysis</h4>
+                        
+                        <div class="mb-4">
+                            <h5>AI Description</h5>
+                            <div class="p-3 bg-light rounded" id="llmDescription"></div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Recommended Models</h5>
+                            <div class="row" id="recommendedModels"></div>
+                        </div>
+                        
+                        <div class="text-end mt-3">
+                            <button class="btn btn-primary" id="continueToStep3Button">
+                                Train Models <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Train Models -->
+            <div class="tab-pane fade" id="step3">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="section-title">Train Models</h3>
+                        <p>We'll use AutoML to find the best hyperparameters for the selected models.</p>
+                        
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i> We'll train the recommended models using cross-validation and hyperparameter tuning to find the best configurations.
+                        </div>
+                        
+                        <div class="text-center mt-3 mb-3">
+                            <button class="btn btn-primary btn-lg" id="startTrainingButton">
+                                <i class="bi bi-play-circle"></i> Start Training
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="loading" id="trainingLoading">
+                    <div class="spinner-border loading-spinner text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="mt-3">Training models with AutoML...</h5>
+                    <p class="text-muted">This may take several minutes depending on the size of your dataset.</p>
+                </div>
+                
+                <div id="trainingResults" style="display: none;">
+                    <h4 class="section-title">Training Results</h4>
+                    
+                    <ul class="nav nav-tabs" id="modelTabs" role="tablist"></ul>
+                    <div class="tab-content" id="modelTabsContent"></div>
+                    
+                    <div class="text-end mt-4">
+                        <button class="btn btn-primary" id="continueToStep4Button">
+                            Test Models <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Test & Download -->
+            <div class="tab-pane fade" id="step4">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="section-title">Test & Download Models</h3>
+                        <p>Test the trained models with your own inputs and download the one that works best for you.</p>
+                        
+                        <div class="mb-4">
+                            <h5>Model Comparison</h5>
+                            <div id="modelComparison" class="mb-3"></div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Test with Your Own Input</h5>
+                            <form id="predictionForm">
+                                <div id="predictionInputs"></div>
+                                <button type="submit" class="btn btn-primary mt-3">
+                                    <i class="bi bi-lightning"></i> Predict
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div id="predictionResults" style="display: none;">
+                            <h5>Prediction Results</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="predictionTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Model</th>
+                                            <th>Prediction</th>
+                                            <th>Details</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Download Models</h5>
+                            <div class="row" id="downloadModels"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <p class="text-muted mb-0">ML Assistant - Powered by LLM & AutoML</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Global variables
+        let uploadedFile = null;
+        let datasetColumns = [];
+        let selectedModels = [];
+        let trainedModels = [];
+        
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const browseButton = document.getElementById('browseButton');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        const dataPreviewCard = document.getElementById('dataPreviewCard');
+        const previewTable = document.getElementById('previewTable');
+        const previewTableHeader = document.getElementById('previewTableHeader');
+        const previewTableBody = document.getElementById('previewTableBody');
+        const rowCount = document.getElementById('rowCount');
+        const colCount = document.getElementById('colCount');
+        const continueToStep2Button = document.getElementById('continueToStep2Button');
+        const targetColumn = document.getElementById('targetColumn');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Event listeners for step 1: Upload
+        browseButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('drop', handleFileDrop);
+        continueToStep2Button.addEventListener('click', moveToStep2);
+        
+        // Event listeners for step 2: Configure
+        document.getElementById('backToStep1Button').addEventListener('click', backToStep1);
+        document.getElementById('taskConfigForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            analyzeData();
+        });
+        document.querySelectorAll('input[name="taskType"]').forEach(radio => {
+            radio.addEventListener('change', updateTaskTypeUI);
+        });
+        document.querySelectorAll('input[name="isLabeled"]').forEach(radio => {
+            radio.addEventListener('change', updateLabeledUI);
+        });
+        document.getElementById('continueToStep3Button').addEventListener('click', moveToStep3);
+        
+        // Event listeners for step 3: Train
+        document.getElementById('startTrainingButton').addEventListener('click', startTraining);
+        document.getElementById('continueToStep4Button').addEventListener('click', moveToStep4);
+        
+        // File upload handlers
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('border-primary');
+        }
+        
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('border-primary');
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect();
+            }
+        }
+        
+        function handleFileSelect() {
+            if (fileInput.files.length === 0) return;
+            
+            uploadedFile = fileInput.files[0];
+            const fileName = uploadedFile.name;
+            
+            // Check file type
+            const fileExt = fileName.split('.').pop().toLowerCase();
+            if (!['csv', 'xls', 'xlsx'].includes(fileExt)) {
+                showError('Unsupported file format. Please upload a CSV or Excel file.');
+                return;
+            }
+            
+            // Show upload progress
+            uploadProgress.style.display = 'block';
+            progressBar.style.width = '0%';
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('datafile', uploadedFile);
+            
+            // Upload file
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+            
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                }
+            };
+            
+            xhr.onload = function() {
+                uploadProgress.style.display = 'none';
+                
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        showDataPreview(response);
+                    } else {
+                        showError(response.error || 'Failed to upload file');
+                    }
+                } else {
+                    showError('Failed to upload file');
+                }
+            };
+            
+            xhr.onerror = function() {
+                uploadProgress.style.display = 'none';
+                showError('Failed to upload file');
+            };
+            
+            xhr.send(formData);
+        }
+        
+        function showDataPreview(data) {
+            // Save dataset columns
+            datasetColumns = data.columns;
+            
+            // Update UI
+            rowCount.textContent = data.rows;
+            colCount.textContent = data.columns.length;
+            
+            // Clear previous preview
+            previewTableHeader.innerHTML = '';
+            previewTableBody.innerHTML = '';
+            
+            // Add header row
+            for (const col of data.columns) {
+                const th = document.createElement('th');
+                th.textContent = col;
+                previewTableHeader.appendChild(th);
+            }
+            
+            // Add data rows
+            for (const row of data.preview) {
+                const tr = document.createElement('tr');
+                for (const col of data.columns) {
+                    const td = document.createElement('td');
+                    td.textContent = row[col] !== null ? row[col] : 'null';
+                    tr.appendChild(td);
+                }
+                previewTableBody.appendChild(tr);
+            }
+            
+            // Show preview card
+            dataPreviewCard.style.display = 'block';
+        }
+        
+        function moveToStep2() {
+            // Populate target column dropdown
+            targetColumn.innerHTML = '<option value="">Select target column...</option>';
+            for (const col of datasetColumns) {
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                targetColumn.appendChild(option);
+            }
+            
+            // Update UI
+            document.getElementById('step1-tab').classList.remove('active');
+            document.getElementById('step2-tab').classList.remove('disabled');
+            document.getElementById('step2-tab').classList.add('active');
+            document.getElementById('step1').classList.remove('show', 'active');
+            document.getElementById('step2').classList.add('show', 'active');
+            
+            // Initialize UI based on default task type
+            updateTaskTypeUI();
+        }
+        
+        function backToStep1() {
+            document.getElementById('step2-tab').classList.remove('active');
+            document.getElementById('step1-tab').classList.add('active');
+            document.getElementById('step2').classList.remove('show', 'active');
+            document.getElementById('step1').classList.add('show', 'active');
+        }
+        
+        function updateTaskTypeUI() {
+            const taskType = document.querySelector('input[name="taskType"]:checked').value;
+            const labeledSection = document.getElementById('labeledDataSection');
+            const targetSection = document.getElementById('targetColumnSection');
+            
+            if (taskType === 'clustering') {
+                labeledSection.style.display = 'none';
+                targetSection.style.display = 'none';
+            } else {
+                labeledSection.style.display = 'block';
+                updateLabeledUI();
+            }
+        }
+        
+        function updateLabeledUI() {
+            const isLabeled = document.querySelector('input[name="isLabeled"]:checked').value === 'true';
+            const targetSection = document.getElementById('targetColumnSection');
+            
+            if (isLabeled) {
+                targetSection.style.display = 'block';
+            } else {
+                targetSection.style.display = 'none';
+            }
+        }
+        
+        function analyzeData() {
+            const taskType = document.querySelector('input[name="taskType"]:checked').value;
+            const isLabeled = document.querySelector('input[name="isLabeled"]:checked').value === 'true';
+            const selectedTarget = document.getElementById('targetColumn').value;
+            const description = document.getElementById('datasetDescription').value;
+            
+            // Validate form
+            if (isLabeled && !selectedTarget) {
+                showError('Please select a target column');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('analysisLoading').style.display = 'block';
+            document.getElementById('analysisResultCard').style.display = 'none';
+            
+            // Prepare data
+            const data = {
+                task_type: taskType,
+                is_labeled: isLabeled,
+                target_column: selectedTarget,
+                description: description
+            };
+            
+            // Send analysis request
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('analysisLoading').style.display = 'none';
+                
+                if (data.success) {
+                    displayAnalysisResults(data);
+                } else {
+                    showError(data.error || 'Failed to analyze dataset');
+                }
+            })
+            .catch(error => {
+                document.getElementById('analysisLoading').style.display = 'none';
+                showError('Error analyzing dataset: ' + error.message);
+            });
+        }
+        
+        function displayAnalysisResults(data) {
+            // Save selected models
+            selectedModels = data.selected_models;
+            
+            // Display LLM description
+            document.getElementById('llmDescription').textContent = data.llm_description;
+            
+            // Display recommended models
+            const modelsContainer = document.getElementById('recommendedModels');
+            modelsContainer.innerHTML = '';
+            
+            for (const model of data.selected_models) {
+                const modelCard = document.createElement('div');
+                modelCard.className = 'col-md-4 mb-3';
+                modelCard.innerHTML = `
+                    <div class="card model-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${model.display_name}</h5>
+                            <p class="card-text text-muted">Type: ${model.type}</p>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle-fill text-success"></i> ${
+                                    model.requires_scaling ? 'Requires feature scaling' : 'No scaling needed'
+                                }</li>
+                                <li><i class="bi bi-gear-fill"></i> Hyperparameter tuning</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                modelsContainer.appendChild(modelCard);
+            }
+            
+            // Show analysis results
+            document.getElementById('analysisResultCard').style.display = 'block';
+        }
+        
+        function moveToStep3() {
+            // Update UI
+            document.getElementById('step2-tab').classList.remove('active');
+            document.getElementById('step3-tab').classList.remove('disabled');
+            document.getElementById('step3-tab').classList.add('active');
+            document.getElementById('step2').classList.remove('show', 'active');
+            document.getElementById('step3').classList.add('show', 'active');
+        }
+        
+        function startTraining() {
+            // Show loading
+            document.getElementById('trainingLoading').style.display = 'block';
+            document.getElementById('trainingResults').style.display = 'none';
+            document.getElementById('startTrainingButton').disabled = true;
+            
+            // Send training request
+            fetch('/train', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('trainingLoading').style.display = 'none';
+                document.getElementById('startTrainingButton').disabled = false;
+                
+                if (data.success) {
+                    displayTrainingResults(data);
+                } else {
+                    showError(data.error || 'Failed to train models');
+                }
+            })
+            .catch(error => {
+                document.getElementById('trainingLoading').style.display = 'none';
+                document.getElementById('startTrainingButton').disabled = false;
+                showError('Error training models: ' + error.message);
+            });
+        }
+        
+        function displayTrainingResults(data) {
+            const modelTabs = document.getElementById('modelTabs');
+            const modelTabsContent = document.getElementById('modelTabsContent');
+            
+            // Clear previous results
+            modelTabs.innerHTML = '';
+            modelTabsContent.innerHTML = '';
+            
+            // Save trained models
+            trainedModels = Object.keys(data.evaluation_results.models);
+            
+            // Create tabs for each model
+            let isFirst = true;
+            for (const modelName in data.evaluation_results.models) {
+                const model = data.evaluation_results.models[modelName];
+                const modelInfo = selectedModels.find(m => m.name === modelName) || { display_name: modelName };
+                
+                // Add tab
+                const tabId = `model-${modelName}-tab`;
+                const contentId = `model-${modelName}-content`;
+                
+                const tabItem = document.createElement('li');
+                tabItem.className = 'nav-item';
+                tabItem.innerHTML = `
+                    <a class="nav-link ${isFirst ? 'active' : ''}" id="${tabId}" data-bs-toggle="tab" href="#${contentId}" role="tab">
+                        ${modelInfo.display_name}
+                    </a>
+                `;
+                modelTabs.appendChild(tabItem);
+                
+                // Add tab content
+                const tabContent = document.createElement('div');
+                tabContent.className = `tab-pane fade ${isFirst ? 'show active' : ''}`;
+                tabContent.id = contentId;
+                
+                // Create metrics display
+                let metricsHTML = '<div class="row">';
+                
+                if (model.metrics) {
+                    for (const metricName in model.metrics) {
+                        if (typeof model.metrics[metricName] === 'number') {
+                            metricsHTML += `
+                                <div class="col-md-3 mb-3">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h6 class="text-muted text-uppercase">${metricName}</h6>
+                                            <div class="metric-value">${model.metrics[metricName].toFixed(4)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+                
+                metricsHTML += '</div>';
+                
+                // Create feature importance display if available
+                let featureImportanceHTML = '';
+                if (model.feature_importance) {
+                    featureImportanceHTML = '<h5 class="mt-4">Feature Importance</h5><div class="row"><div class="col-md-8">';
+                    
+                    // Sort features by importance
+                    const features = Object.entries(model.feature_importance)
+                        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                        .slice(0, 10); // Show top 10 features
+                    
+                    // Find max absolute importance for scaling
+                    const maxImportance = Math.max(...features.map(f => Math.abs(f[1])));
+                    
+                    for (const [feature, importance] of features) {
+                        const width = Math.abs(importance) / maxImportance * 100;
+                        const isPositive = importance > 0;
+                        
+                        featureImportanceHTML += `
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>${feature}</span>
+                                    <span>${importance.toFixed(4)}</span>
+                                </div>
+                                <div class="feature-importance-bar">
+                                    <div class="feature-importance-fill" style="width: ${width}%; background-color: ${isPositive ? '#4b6cb7' : '#d9534f'};"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    featureImportanceHTML += '</div></div>';
+                }
+                
+                // Create hyperparameters display
+                let hyperparamsHTML = '';
+                if (model.best_params && Object.keys(model.best_params).length > 0) {
+                    hyperparamsHTML = '<h5 class="mt-4">Best Hyperparameters</h5><div class="table-responsive"><table class="table table-sm table-bordered">';
+                    hyperparamsHTML += '<thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody>';
+                    
+                    for (const [param, value] of Object.entries(model.best_params)) {
+                        hyperparamsHTML += `<tr><td>${param}</td><td>${value}</td></tr>`;
+                    }
+                    
+                    hyperparamsHTML += '</tbody></table></div>';
+                }
+                
+                // Add cross-validation results if available
+                let cvHTML = '';
+                if (model.cross_validation && model.cross_validation.scores) {
+                    cvHTML = '<h5 class="mt-4">Cross-Validation Results</h5>';
+                    cvHTML += `<p>Mean ${model.cross_validation.metric}: <strong>${model.cross_validation.mean.toFixed(4)}</strong> ± ${model.cross_validation.std.toFixed(4)}</p>`;
+                    
+                    // Add CV scores as a small chart
+                    cvHTML += '<canvas id="cv-chart-' + modelName + '" height="100"></canvas>';
+                }
+                
+                // Combine all sections
+                tabContent.innerHTML = `
+                    <h4 class="mb-3">${modelInfo.display_name} Results</h4>
+                    <div class="alert alert-light">
+                        <strong>Training Time:</strong> ${model.training_time ? (model.training_time.toFixed(2) + ' seconds') : 'N/A'}
+                    </div>
+                    
+                    <h5>Performance Metrics</h5>
+                    ${metricsHTML}
+                    
+                    ${cvHTML}
+                    ${featureImportanceHTML}
+                    ${hyperparamsHTML}
+                `;
+                
+                modelTabsContent.appendChild(tabContent);
+                
+                isFirst = false;
+            }
+            
+            // Show results
+            document.getElementById('trainingResults').style.display = 'block';
+            
+            // Create CV charts after DOM is updated
+            for (const modelName in data.evaluation_results.models) {
+                const model = data.evaluation_results.models[modelName];
+                if (model.cross_validation && model.cross_validation.scores) {
+                    const ctx = document.getElementById('cv-chart-' + modelName);
+                    if (ctx) {
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: model.cross_validation.scores.map((_, i) => `Fold ${i+1}`),
+                                datasets: [{
+                                    label: model.cross_validation.metric,
+                                    data: model.cross_validation.scores,
+                                    backgroundColor: 'rgba(75, 108, 183, 0.6)',
+                                    borderColor: 'rgba(75, 108, 183, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: false
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+            
+            // Enable continue button
+            document.getElementById('continueToStep4Button').disabled = false;
+        }
+        
+        function moveToStep4() {
+            // Update UI
+            document.getElementById('step3-tab').classList.remove('active');
+            document.getElementById('step4-tab').classList.remove('disabled');
+            document.getElementById('step4-tab').classList.add('active');
+            document.getElementById('step3').classList.remove('show', 'active');
+            document.getElementById('step4').classList.add('show', 'active');
+            
+            // Prepare prediction form
+            preparePredictionForm();
+            
+            // Prepare model download section
+            prepareModelDownload();
+        }
+        
+        function preparePredictionForm() {
+            const inputsContainer = document.getElementById('predictionInputs');
+            inputsContainer.innerHTML = '';
+            
+            // Create input fields for each feature
+            for (const column of datasetColumns) {
+                // Skip target column if specified
+                const targetCol = document.getElementById('targetColumn').value;
+                if (column === targetCol) continue;
+                
+                const formGroup = document.createElement('div');
+                formGroup.className = 'mb-3';
+                formGroup.innerHTML = `
+                    <label for="input-${column}" class="form-label">${column}</label>
+                    <input type="text" class="form-control" id="input-${column}" name="${column}" required>
+                `;
+                
+                inputsContainer.appendChild(formGroup);
+            }
+            
+            // Add event listener for form submission
+            document.getElementById('predictionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                makePrediction();
+            });
+        }
+        
+        function makePrediction() {
+            // Gather input values
+            const inputs = {};
+            for (const column of datasetColumns) {
+                const targetCol = document.getElementById('targetColumn').value;
+                if (column === targetCol) continue;
+                
+                const input = document.getElementById(`input-${column}`);
+                if (input) {
+                    // Try to convert to number if possible
+                    const value = input.value;
+                    inputs[column] = !isNaN(value) && value !== '' ? parseFloat(value) : value;
+                }
+            }
+            
+            // Send prediction request
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    input_data: inputs
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayPredictionResults(data.predictions);
+                } else {
+                    showError(data.error || 'Failed to make prediction');
+                }
+            })
+            .catch(error => {
+                showError('Error making prediction: ' + error.message);
+            });
+        }
+        
+        function displayPredictionResults(predictions) {
+            const resultsTable = document.getElementById('predictionTable').querySelector('tbody');
+            resultsTable.innerHTML = '';
+            
+            // Add a row for each model
+            for (const [modelName, result] of Object.entries(predictions)) {
+                const row = document.createElement('tr');
+                
+                // Find display name
+                const modelInfo = selectedModels.find(m => m.name === modelName) || { display_name: modelName };
+                
+                // Model name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = modelInfo.display_name;
+                row.appendChild(nameCell);
+                
+                // Prediction
+                const predCell = document.createElement('td');
+                predCell.innerHTML = `<strong>${result.prediction}</strong>`;
+                row.appendChild(predCell);
+                
+                // Details
+                const detailsCell = document.createElement('td');
+                if (result.probabilities) {
+                    // For classification, show probabilities
+                    let probHTML = '<ul class="list-unstyled mb-0">';
+                    for (const [label, prob] of Object.entries(result.probabilities)) {
+                        probHTML += `<li>${label}: ${(prob * 100).toFixed(2)}%</li>`;
+                    }
+                    probHTML += '</ul>';
+                    detailsCell.innerHTML = probHTML;
+                } else {
+                    detailsCell.textContent = 'N/A';
+                }
+                row.appendChild(detailsCell);
+                
+                // Actions
+                const actionsCell = document.createElement('td');
+                actionsCell.innerHTML = `
+                    <a href="/download_model/${modelName}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-download"></i> Download
+                    </a>
+                `;
+                row.appendChild(actionsCell);
+                
+                resultsTable.appendChild(row);
+            }
+            
+            // Show results
+            document.getElementById('predictionResults').style.display = 'block';
+        }
+        
+        function prepareModelDownload() {
+            const downloadContainer = document.getElementById('downloadModels');
+            downloadContainer.innerHTML = '';
+            
+            // Create download card for each model
+            for (const modelName of trainedModels) {
+                const modelInfo = selectedModels.find(m => m.name === modelName) || { 
+                    display_name: modelName,
+                    library: 'Unknown'
+                };
+                
+                const modelCard = document.createElement('div');
+                modelCard.className = 'col-md-4 mb-3';
+                modelCard.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${modelInfo.display_name}</h5>
+                            <p class="card-text text-muted small">Library: ${modelInfo.library}</p>
+                            <a href="/download_model/${modelName}" class="btn btn-primary">
+                                <i class="bi bi-download"></i> Download Model
+                            </a>
+                            <p class="card-text mt-2 small">
+                                <i class="bi bi-info-circle"></i> Model will be saved as a .joblib file that can be loaded using the joblib library in Python.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                downloadContainer.appendChild(modelCard);
+            }
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorAlert.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
